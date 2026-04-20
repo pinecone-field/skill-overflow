@@ -1,0 +1,15 @@
+{
+  "name": "skill-overflow-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest",
+    "@pinecone-database/pinecone": "latest",
+    "express": "latest",
+    "pg": "latest",
+    "uuid": "latest"
+  }
+}
