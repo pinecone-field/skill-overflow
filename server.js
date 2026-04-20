@@ -20,8 +20,9 @@ app.get('/.well-known/oauth-authorization-server', (req, res) => {
   const base = `https://${req.headers.host}`;
   res.json({
     issuer: base,
-    registration_endpoint: `${base}/register`,
+    authorization_endpoint: `${base}/oauth/authorize`,
     token_endpoint: `${base}/oauth/token`,
+    registration_endpoint: `${base}/register`,
     response_types_supported: ['code'],
     grant_types_supported: ['client_credentials'],
   });
