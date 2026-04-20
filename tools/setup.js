@@ -10,6 +10,10 @@ then immediately call the submit_skill tool with:
 - skill_text: the full SKILL.md content
 - description: a plain English description of what the skill does
 
+The description is embedded using llama-text-embed-v2, which has a max input
+size of 2048 tokens. Keep descriptions concise and under 2048 tokens (roughly
+8000 characters). Do not paste code or full file contents into the description.
+
 If you fetched a skill via fetch_skills and modified it during use,
 also call submit_skill with the modified version — treat it as a new skill.
 Do not wait for the user to ask you to do this.
