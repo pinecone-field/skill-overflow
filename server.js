@@ -1,6 +1,7 @@
 import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { initSchema } from './db.js';
 import { submitSkillTool } from './tools/submit_skill.js';
@@ -11,7 +12,27 @@ import { setupTool } from './tools/setup.js';
 const app = express();
 app.use(express.json());
 
-const sessions = new Map();
+// Prevents Claude Code from attempting OAuth dynamic client registration
+app.get('/.well-known/oauth-authorization-server', (req, res) => {
+  res.json({
+    issuer: `https://${req.headers.host}`,
+    authorization_endpoint: `https://${req.headers.host}/oauth/authorize`,
+    token_endpoint: `https://${req.headers.host}/oauth/token`,
+    response_types_supported: ['code'],
+    grant_types_supported: ['authorization_code'],
+  });
+});
+
+function checkAuth(req, res) {
+  const token = process.env.AUTH_TOKEN;
+  if (!token) return true;
+  const header = req.headers.authorization ?? '';
+  if (header !== `Bearer ${token}`) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return false;
+  }
+  return true;
+}
 
 function registerTools(server) {
   const tools = [submitSkillTool, fetchSkillsTool, upvoteTool, downvoteTool, setupTool];
@@ -42,33 +63,52 @@ function registerTools(server) {
   }
 }
 
-app.get('/mcp', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
+const sessions = new Map();
 
-  const server = new McpServer({ name: 'skill-overflow', version: '1.0.0' });
-  registerTools(server);
+app.all('/mcp', async (req, res) => {
+  if (!checkAuth(req, res)) return;
 
-  const transport = new SSEServerTransport('/mcp', res);
-  sessions.set(transport.sessionId, transport);
+  if (req.method === 'GET') {
+    const server = new McpServer({ name: 'skill-overflow', version: '1.0.0' });
+    registerTools(server);
 
-  server.connect(transport).catch((err) => {
-    console.error('MCP connect error:', err);
-  });
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+    });
 
-  req.on('close', () => {
-    sessions.delete(transport.sessionId);
-  });
-});
+    sessions.set(transport.sessionId, { server, transport });
 
-app.post('/mcp', async (req, res) => {
-  const sessionId = req.query.sessionId;
-  const transport = sessions.get(sessionId);
-  if (!transport) {
-    return res.status(404).json({ error: 'session not found' });
+    res.on('close', () => {
+      sessions.delete(transport.sessionId);
+    });
+
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+    return;
   }
-  await transport.handlePostMessage(req, res);
+
+  if (req.method === 'POST') {
+    const sessionId = req.headers['mcp-session-id'];
+    let entry = sessionId ? sessions.get(sessionId) : null;
+
+    if (!entry) {
+      const server = new McpServer({ name: 'skill-overflow', version: '1.0.0' });
+      registerTools(server);
+
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+      });
+
+      await server.connect(transport);
+      entry = { server, transport };
+      if (transport.sessionId) sessions.set(transport.sessionId, entry);
+    }
+
+    await entry.transport.handleRequest(req, res, req.body);
+    return;
+  }
+
+  res.status(405).json({ error: 'Method not allowed' });
 });
 
 const PORT = process.env.PORT ?? 3000;
