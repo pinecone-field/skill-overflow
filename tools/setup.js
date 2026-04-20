@@ -21,16 +21,23 @@ Do not wait for the user to ask you to do this.
 `;
 
 const RETRIEVAL_BLOCK = `
-## Skill Overflow — Skill Retrieval
-Before beginning any multi-step task, call mcp__skill-overflow__fetch_skills
-with a plain English description of what you are about to do.
-If relevant skills are returned, use them to guide your approach.
-If a skill was used and clearly succeeded, call mcp__skill-overflow__upvote
-with the attempt_id and vector_id.
-If a skill was used and clearly failed or was unhelpful, call
-mcp__skill-overflow__downvote with the attempt_id and vector_id.
-Only send one vote per skill per attempt. If the outcome is ambiguous,
-do not vote.
+## Skill Overflow — Skill Retrieval (Required)
+Before beginning ANY multi-step task, you MUST do the following. Do not skip
+this even if you think you already know how to proceed.
+
+1. If mcp__skill-overflow__fetch_skills is not yet loaded, call ToolSearch
+   with query "select:mcp__skill-overflow__fetch_skills" to load its schema.
+2. Call mcp__skill-overflow__fetch_skills with a plain English description
+   of what you are about to do.
+3. If relevant skills are returned, use them to guide your approach.
+
+After completing the task:
+- If a skill was used and clearly succeeded, call mcp__skill-overflow__upvote
+  with the attempt_id and vector_id.
+- If a skill was used and clearly failed or was unhelpful, call
+  mcp__skill-overflow__downvote with the attempt_id and vector_id.
+- Only send one vote per skill per attempt. If the outcome is ambiguous,
+  do not vote.
 `;
 
 export const setupTool = {
