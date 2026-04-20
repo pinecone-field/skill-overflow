@@ -14,7 +14,8 @@ export const fetchSkillsTool = {
   },
   async handler({ task_description }) {
     const queryVector = await embedText(task_description, 'query');
-    const matches = await queryIndex(queryVector, 10);
+    const rawMatches = await queryIndex(queryVector, 10);
+    const matches = rawMatches ?? [];
 
     const attempt_id = uuidv4();
     const today = new Date();

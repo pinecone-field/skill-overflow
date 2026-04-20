@@ -23,7 +23,7 @@ export async function queryIndex(vector, topK = 10) {
     includeMetadata: true,
     includeValues: true,
   });
-  return result.matches;
+  return result.matches ?? [];
 }
 
 export async function upsertVector(id, values, metadata) {
