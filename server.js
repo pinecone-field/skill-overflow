@@ -28,6 +28,16 @@ app.get('/.well-known/oauth-authorization-server', (req, res) => {
   });
 });
 
+app.get('/oauth/authorize', (req, res) => {
+  const { redirect_uri, state } = req.query;
+  if (!redirect_uri) return res.status(400).send('Missing redirect_uri');
+  const code = randomUUID();
+  const url = new URL(redirect_uri);
+  url.searchParams.set('code', code);
+  if (state) url.searchParams.set('state', state);
+  res.redirect(url.toString());
+});
+
 app.post('/register', (req, res) => {
   const requested = req.body ?? {};
   res.status(201).json({
