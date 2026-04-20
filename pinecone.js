@@ -28,11 +28,11 @@ export async function queryIndex(vector, topK = 10) {
 
 export async function upsertVector(id, values, metadata) {
   const index = getIndex();
-  await index.upsert([{ id, values, metadata }]);
+  await index.upsert({ records: [{ id, values, metadata }] });
 }
 
 export async function fetchVector(id) {
   const index = getIndex();
-  const result = await index.fetch([id]);
+  const result = await index.fetch({ ids: [id] });
   return result.records[id] ?? null;
 }
