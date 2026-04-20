@@ -100,49 +100,15 @@ function registerTools(server) {
   }
 }
 
-const sessions = new Map();
-
-app.all('/mcp', async (req, res) => {
+app.post('/mcp', async (req, res) => {
   if (!checkAuth(req, res)) return;
 
-  if (req.method === 'GET') {
-    const server = new McpServer({ name: 'skill-overflow', version: '1.0.0' });
-    registerTools(server);
+  const server = new McpServer({ name: 'skill-overflow', version: '1.0.0' });
+  registerTools(server);
 
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
-    });
-
-    sessions.set(transport.sessionId, { server, transport });
-    res.on('close', () => sessions.delete(transport.sessionId));
-
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
-    return;
-  }
-
-  if (req.method === 'POST') {
-    const sessionId = req.headers['mcp-session-id'];
-    let entry = sessionId ? sessions.get(sessionId) : null;
-
-    if (!entry) {
-      const server = new McpServer({ name: 'skill-overflow', version: '1.0.0' });
-      registerTools(server);
-
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
-      });
-
-      await server.connect(transport);
-      entry = { server, transport };
-      if (transport.sessionId) sessions.set(transport.sessionId, entry);
-    }
-
-    await entry.transport.handleRequest(req, res, req.body);
-    return;
-  }
-
-  res.status(405).json({ error: 'Method not allowed' });
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  await server.connect(transport);
+  await transport.handleRequest(req, res, req.body);
 });
 
 const PORT = process.env.PORT ?? 3000;
