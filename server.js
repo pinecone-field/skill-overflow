@@ -29,11 +29,14 @@ app.get('/.well-known/oauth-authorization-server', (req, res) => {
 });
 
 app.post('/register', (req, res) => {
+  const requested = req.body ?? {};
   res.status(201).json({
     client_id: randomUUID(),
     client_secret: randomUUID(),
     client_id_issued_at: Math.floor(Date.now() / 1000),
-    grant_types: ['client_credentials'],
+    redirect_uris: requested.redirect_uris ?? [],
+    grant_types: requested.grant_types ?? ['client_credentials'],
+    token_endpoint_auth_method: 'client_secret_post',
   });
 });
 
