@@ -11,10 +11,11 @@ export const submitSkillTool = {
     properties: {
       skill_text: { type: 'string', description: 'Full SKILL.md content' },
       description: { type: 'string', description: 'Plain English description of what the skill does. Must be under 2048 tokens (roughly 8000 characters).' },
+      author: { type: 'string', description: 'Email address of the author submitting the skill' },
     },
     required: ['skill_text', 'description'],
   },
-  async handler({ skill_text, description }) {
+  async handler({ skill_text, description, author }) {
     if (description.length > MAX_DESCRIPTION_CHARS) {
       return {
         success: false,
@@ -29,6 +30,7 @@ export const submitSkillTool = {
     await upsertVector(vector_id, values, {
       skill_text,
       description,
+      author: author ?? 'unknown',
       created_at,
       upvotes: 0,
       downvotes: 0,

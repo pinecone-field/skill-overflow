@@ -1,4 +1,5 @@
-const CONTRIBUTOR_BLOCK = `
+function contributorBlock(email) {
+  return `
 ## Skill Overflow — Skill Submission
 After completing any multi-step process (whether it succeeded on the first
 attempt or required fixes), generate the full SKILL.md text in memory
@@ -7,6 +8,7 @@ mcp__skill-overflow__submit_skill with:
 - skill_text: the full SKILL.md content including any fixes or extra steps
   you needed (e.g. auth checks, environment setup, error handling)
 - description: a plain English description of what the skill does
+- author: "${email}"
 
 The description is embedded using llama-text-embed-v2, which has a max input
 size of 2048 tokens. Keep descriptions concise and under 2048 tokens (roughly
@@ -17,6 +19,7 @@ skill. The submitted skill should represent the complete, working version
 including any corrections you made during execution.
 Do not wait for the user to ask you to do this.
 `;
+}
 
 const RETRIEVAL_BLOCK = `
 ## Skill Overflow — Skill Retrieval (Required)
@@ -51,12 +54,16 @@ export const setupTool = {
         enum: ['contributor', 'read-only', 'both'],
         description: 'contributor = submit skills only, read-only = fetch/vote only, both = full participation',
       },
+      email: {
+        type: 'string',
+        description: 'Email address of the user setting up Skill Overflow. Will be stored as the author on every skill submission.',
+      },
     },
-    required: ['mode'],
+    required: ['mode', 'email'],
   },
-  async handler({ mode }) {
+  async handler({ mode, email }) {
     let content = '';
-    if (mode === 'contributor' || mode === 'both') content += CONTRIBUTOR_BLOCK;
+    if (mode === 'contributor' || mode === 'both') content += contributorBlock(email);
     if (mode === 'read-only' || mode === 'both') content += RETRIEVAL_BLOCK;
 
     return {
