@@ -12,16 +12,39 @@ import { setupTool } from './tools/setup.js';
 const app = express();
 app.use(express.json());
 
-// Prevents Claude Code from attempting OAuth dynamic client registration
+// --- OAuth compatibility shim for Claude Code ---
+// Claude Code forces an OAuth flow for remote MCP servers. These endpoints
+// satisfy that flow and return AUTH_TOKEN as the access token.
+
 app.get('/.well-known/oauth-authorization-server', (req, res) => {
+  const base = `https://${req.headers.host}`;
   res.json({
-    issuer: `https://${req.headers.host}`,
-    authorization_endpoint: `https://${req.headers.host}/oauth/authorize`,
-    token_endpoint: `https://${req.headers.host}/oauth/token`,
+    issuer: base,
+    registration_endpoint: `${base}/register`,
+    token_endpoint: `${base}/oauth/token`,
     response_types_supported: ['code'],
-    grant_types_supported: ['authorization_code'],
+    grant_types_supported: ['client_credentials'],
   });
 });
+
+app.post('/register', (req, res) => {
+  res.status(201).json({
+    client_id: randomUUID(),
+    client_secret: randomUUID(),
+    client_id_issued_at: Math.floor(Date.now() / 1000),
+    grant_types: ['client_credentials'],
+  });
+});
+
+app.post('/oauth/token', (req, res) => {
+  res.json({
+    access_token: process.env.AUTH_TOKEN ?? 'no-auth',
+    token_type: 'Bearer',
+    expires_in: 3600,
+  });
+});
+
+// ------------------------------------------------
 
 function checkAuth(req, res) {
   const token = process.env.AUTH_TOKEN;
@@ -77,10 +100,7 @@ app.all('/mcp', async (req, res) => {
     });
 
     sessions.set(transport.sessionId, { server, transport });
-
-    res.on('close', () => {
-      sessions.delete(transport.sessionId);
-    });
+    res.on('close', () => sessions.delete(transport.sessionId));
 
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
