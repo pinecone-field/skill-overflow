@@ -7,11 +7,11 @@ function getIndex() {
 }
 
 export async function embedText(text, inputType = 'passage') {
-  const result = await pc.inference.embed(
-    'llama-text-embed-v2',
-    [text],
-    { input_type: inputType, truncate: 'END' }
-  );
+  const result = await pc.inference.embed({
+    model: 'llama-text-embed-v2',
+    inputs: [text],
+    parameters: { inputType, truncate: 'END' },
+  });
   return result.data[0].values;
 }
 
