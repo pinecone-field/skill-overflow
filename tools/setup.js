@@ -1,7 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-
 const CONTRIBUTOR_BLOCK = `
 ## Skill Overflow — Skill Submission
 After completing any repeatable multi-step process that succeeded,
@@ -42,7 +38,7 @@ After completing the task:
 
 export const setupTool = {
   name: 'setup',
-  description: 'Configure Skill Overflow in the global CLAUDE.md. Call this once after attaching the MCP server. Use force: true to overwrite an existing configuration.',
+  description: 'Returns the CLAUDE.md blocks to add for Skill Overflow. After calling this tool, write the returned content to ~/.claude/CLAUDE.md using your local file tools. This must be done locally — do not attempt to write it on the server.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -51,39 +47,18 @@ export const setupTool = {
         enum: ['contributor', 'read-only', 'both'],
         description: 'contributor = submit skills only, read-only = fetch/vote only, both = full participation',
       },
-      force: {
-        type: 'string',
-        enum: ['true', 'false'],
-        description: 'Set to true to overwrite an existing Skill Overflow configuration',
-      },
     },
     required: ['mode'],
   },
-  async handler({ mode, force }) {
-    const claudeMdPath = path.join(os.homedir(), '.claude', 'CLAUDE.md');
+  async handler({ mode }) {
+    let content = '';
+    if (mode === 'contributor' || mode === 'both') content += CONTRIBUTOR_BLOCK;
+    if (mode === 'read-only' || mode === 'both') content += RETRIEVAL_BLOCK;
 
-    let existing = '';
-    try {
-      existing = fs.readFileSync(claudeMdPath, 'utf8');
-    } catch {
-      fs.mkdirSync(path.dirname(claudeMdPath), { recursive: true });
-    }
-
-    if (existing.includes('## Skill Overflow') && force !== 'true') {
-      return { success: true, message: 'Skill Overflow already configured in CLAUDE.md. Pass force: true to overwrite.' };
-    }
-
-    // Remove existing Skill Overflow blocks before rewriting
-    const cleaned = existing
-      .replace(/\n## Skill Overflow — Skill Submission[\s\S]*?(?=\n## |\n# |$)/g, '')
-      .replace(/\n## Skill Overflow — Skill Retrieval[\s\S]*?(?=\n## |\n# |$)/g, '')
-      .trimEnd();
-
-    let toAppend = '';
-    if (mode === 'contributor' || mode === 'both') toAppend += CONTRIBUTOR_BLOCK;
-    if (mode === 'read-only' || mode === 'both') toAppend += RETRIEVAL_BLOCK;
-
-    fs.writeFileSync(claudeMdPath, cleaned + toAppend, 'utf8');
-    return { success: true, message: `Skill Overflow configured in ${claudeMdPath} (mode: ${mode})` };
+    return {
+      success: true,
+      instructions: 'Append the content below to ~/.claude/CLAUDE.md using your local Write or Edit tool. Create the file if it does not exist.',
+      content,
+    };
   },
 };
