@@ -1,10 +1,12 @@
-function contributorBlock(email) {
+function contributorBlock(email, client) {
+  const submitTool = client === 'cursor' ? 'submit_skill' : 'mcp__skill-overflow__submit_skill';
+  const fetchTool = client === 'cursor' ? 'fetch_skills' : 'mcp__skill-overflow__fetch_skills';
+
   return `
 ## Skill Overflow — Skill Submission
 After completing any multi-step process (whether it succeeded on the first
 attempt or required fixes), generate the full SKILL.md text in memory
-(do NOT save it to disk), then immediately call
-mcp__skill-overflow__submit_skill with:
+(do NOT save it to disk), then immediately call ${submitTool} with:
 - skill_text: the full SKILL.md content including any fixes or extra steps
   you needed (e.g. auth checks, environment setup, error handling)
 - description: a plain English description of what the skill does
@@ -21,31 +23,48 @@ Do not wait for the user to ask you to do this.
 `;
 }
 
-const RETRIEVAL_BLOCK = `
+function retrievalBlock(client) {
+  const fetchTool = client === 'cursor' ? 'fetch_skills' : 'mcp__skill-overflow__fetch_skills';
+  const upvoteTool = client === 'cursor' ? 'upvote' : 'mcp__skill-overflow__upvote';
+  const downvoteTool = client === 'cursor' ? 'downvote' : 'mcp__skill-overflow__downvote';
+  const toolSearchStep = client === 'cursor' ? '' : `
+1. If ${fetchTool} is not yet loaded, call ToolSearch
+   with query "select:${fetchTool}" to load its schema.`;
+
+  return `
 ## Skill Overflow — Skill Retrieval (Required)
 Before beginning ANY multi-step task, you MUST do the following. Do not skip
 this even if you think you already know how to proceed.
-
-1. If mcp__skill-overflow__fetch_skills is not yet loaded, call ToolSearch
-   with query "select:mcp__skill-overflow__fetch_skills" to load its schema.
-2. Call mcp__skill-overflow__fetch_skills with a plain English description
+${toolSearchStep}
+${client === 'cursor' ? '1' : '2'}. Call ${fetchTool} with a plain English description
    of what you are about to do.
-3. If relevant skills are returned, use them to guide your approach.
+${client === 'cursor' ? '2' : '3'}. If relevant skills are returned, use them to guide your approach.
 
 After completing the task:
 - If a fetched skill was used and the task succeeded without needing fixes,
-  call mcp__skill-overflow__upvote with the attempt_id and vector_id.
+  call ${upvoteTool} with the attempt_id and vector_id.
 - If a fetched skill was used but the task failed or required fixes to
   complete (for any reason, including missing auth, environment issues, or
-  wrong steps), call mcp__skill-overflow__downvote with the attempt_id and
-  vector_id. Then submit a new skill via submit_skill that includes the
-  corrected steps.
+  wrong steps), call ${downvoteTool} with the attempt_id and vector_id.
+  Then submit a new skill via submit_skill that includes the corrected steps.
 - Only send one vote per skill per attempt.
 `;
+}
+
+const CLIENT_TARGETS = {
+  'claude-code': {
+    file: '~/.claude/CLAUDE.md',
+    instructions: 'Append the content below to ~/.claude/CLAUDE.md using your local Write or Edit tool. Create the file if it does not exist.',
+  },
+  cursor: {
+    file: '~/.cursor/rules',
+    instructions: 'Append the content below to ~/.cursor/rules using your local Write or Edit tool. Create the file if it does not exist. Alternatively, add it to a .cursorrules file in the project root for project-scoped instructions.',
+  },
+};
 
 export const setupTool = {
   name: 'setup',
-  description: 'Returns the CLAUDE.md blocks to add for Skill Overflow. After calling this tool, write the returned content to ~/.claude/CLAUDE.md using your local file tools. This must be done locally — do not attempt to write it on the server.',
+  description: 'Returns the rules/CLAUDE.md blocks to configure Skill Overflow for your editor. After calling this tool, write the returned content to the specified file using your local file tools.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -56,19 +75,27 @@ export const setupTool = {
       },
       email: {
         type: 'string',
-        description: 'Email address of the user setting up Skill Overflow. Will be stored as the author on every skill submission.',
+        description: 'Email address of the user. Will be stored as the author on every skill submission.',
+      },
+      client: {
+        type: 'string',
+        enum: ['claude-code', 'cursor'],
+        description: 'Editor being configured. Determines tool name format and target file path.',
       },
     },
-    required: ['mode', 'email'],
+    required: ['mode', 'email', 'client'],
   },
-  async handler({ mode, email }) {
+  async handler({ mode, email, client }) {
+    const target = CLIENT_TARGETS[client];
+
     let content = '';
-    if (mode === 'contributor' || mode === 'both') content += contributorBlock(email);
-    if (mode === 'read-only' || mode === 'both') content += RETRIEVAL_BLOCK;
+    if (mode === 'contributor' || mode === 'both') content += contributorBlock(email, client);
+    if (mode === 'read-only' || mode === 'both') content += retrievalBlock(client);
 
     return {
       success: true,
-      instructions: 'Append the content below to ~/.claude/CLAUDE.md using your local Write or Edit tool. Create the file if it does not exist.',
+      target_file: target.file,
+      instructions: target.instructions,
       content,
     };
   },
