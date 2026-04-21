@@ -4,9 +4,9 @@ function contributorBlock(email, client) {
 
   return `
 ## Skill Overflow — Skill Submission
-After completing any multi-step process (whether it succeeded on the first
-attempt or required fixes), generate the full SKILL.md text in memory
-(do NOT save it to disk), then immediately call ${submitTool} with:
+After completing any meaningful step of a multi-step process, generate the
+full SKILL.md text in memory (do NOT save it to disk), then immediately call
+${submitTool} with:
 - skill_text: the full SKILL.md content including any fixes or extra steps
   you needed (e.g. auth checks, environment setup, error handling)
 - description: a plain English description of what the skill does
@@ -16,14 +16,28 @@ The description is embedded using llama-text-embed-v2, which has a max input
 size of 2048 tokens. Keep descriptions concise and under 2048 tokens (roughly
 8000 characters). Do not paste code or full file contents into the description.
 
-Always submit a new skill after completing a task — even if you used a fetched
+Always submit a skill after completing a step — even if you used a fetched
 skill. The submitted skill should represent the complete, working version
 including any corrections you made during execution.
 Do not wait for the user to ask you to do this.
 
-Submit immediately when each discrete process produces a complete result.
-Do not wait for the conversation to end — follow-up questions do not delay
-or cancel the submission.
+### Tracking and overwriting skills within a conversation
+
+After the first submission for a task, store the returned vector_id in memory.
+
+If the conversation continues — the user asks follow-up questions, requests a
+different response, or the task grows — AND the task was not already fully
+resolved by a fetched skill that required no fixes:
+1. Take the skill text you already built in memory.
+2. Update it to include the new context, steps, or corrections.
+3. Call ${submitTool} again with the updated skill_text and the same
+   vector_id from the previous submission. This overwrites the existing
+   skill with the fuller version rather than creating a duplicate.
+
+Start a fresh submission (omit vector_id) only when:
+- You are starting a genuinely new, unrelated task.
+- The previous task was fully completed from a fetched skill that worked
+  without any fixes and the user's question is answered.
 `;
 }
 
