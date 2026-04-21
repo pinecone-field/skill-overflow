@@ -80,7 +80,15 @@ const CLIENT_TARGETS = {
   },
 };
 
-export const setupTool = {
+export function createSetupTool(allowedModes = ['contributor', 'read-only', 'both']) {
+  const modeDescriptions = {
+    contributor: 'submit skills only',
+    'read-only': 'fetch/vote only',
+    both: 'full participation',
+  };
+  const description = allowedModes.map(m => `${m} = ${modeDescriptions[m]}`).join(', ');
+
+  return {
   name: 'setup',
   description: 'Returns the rules/CLAUDE.md blocks to configure Skill Overflow for your editor. After calling this tool, write the returned content to the specified file using your local file tools.',
   inputSchema: {
@@ -88,8 +96,8 @@ export const setupTool = {
     properties: {
       mode: {
         type: 'string',
-        enum: ['contributor', 'read-only', 'both'],
-        description: 'contributor = submit skills only, read-only = fetch/vote only, both = full participation',
+        enum: allowedModes,
+        description,
       },
       email: {
         type: 'string',
@@ -117,4 +125,7 @@ export const setupTool = {
       content,
     };
   },
-};
+  };
+}
+
+export const setupTool = createSetupTool();

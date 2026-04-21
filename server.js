@@ -7,7 +7,7 @@ import { initSchema } from './db.js';
 import { submitSkillTool } from './tools/submit_skill.js';
 import { fetchSkillsTool } from './tools/fetch_skills.js';
 import { upvoteTool, downvoteTool } from './tools/upvote.js';
-import { setupTool } from './tools/setup.js';
+import { createSetupTool } from './tools/setup.js';
 
 const app = express();
 app.use(express.json());
@@ -72,9 +72,9 @@ function checkAuth(req, res) {
 }
 
 const TOOL_SETS = {
-  both: [submitSkillTool, fetchSkillsTool, upvoteTool, downvoteTool, setupTool],
-  contributor: [submitSkillTool, setupTool],
-  'read-only': [fetchSkillsTool, upvoteTool, downvoteTool, setupTool],
+  both: [submitSkillTool, fetchSkillsTool, upvoteTool, downvoteTool, createSetupTool()],
+  contributor: [submitSkillTool, createSetupTool(['contributor'])],
+  'read-only': [fetchSkillsTool, upvoteTool, downvoteTool, createSetupTool(['read-only'])],
 };
 
 function registerTools(server, mode = 'both') {
