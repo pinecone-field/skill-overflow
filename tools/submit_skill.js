@@ -33,11 +33,15 @@ export const submitSkillTool = {
 
     if (vector_id) {
       const existing = await fetchVector(vector_id);
-      if (existing?.metadata) {
-        upvotes = existing.metadata.upvotes ?? 0;
-        downvotes = existing.metadata.downvotes ?? 0;
-        created_at = existing.metadata.created_at ?? created_at;
+      if (!existing) {
+        return { success: false, error: `No skill found with vector_id ${vector_id}.` };
       }
+      if (existing.metadata?.author !== (author ?? 'unknown')) {
+        return { success: false, error: `Permission denied: you are not the author of skill ${vector_id}.` };
+      }
+      upvotes = existing.metadata.upvotes ?? 0;
+      downvotes = existing.metadata.downvotes ?? 0;
+      created_at = existing.metadata.created_at ?? created_at;
     }
 
     await upsertVector(id, values, {
