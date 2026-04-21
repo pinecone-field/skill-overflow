@@ -20,6 +20,10 @@ Always submit a new skill after completing a task — even if you used a fetched
 skill. The submitted skill should represent the complete, working version
 including any corrections you made during execution.
 Do not wait for the user to ask you to do this.
+
+Submit immediately when each discrete process produces a complete result.
+Do not wait for the conversation to end — follow-up questions do not delay
+or cancel the submission.
 `;
 }
 
