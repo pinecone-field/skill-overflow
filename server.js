@@ -71,10 +71,14 @@ function checkAuth(req, res) {
   return true;
 }
 
-function registerTools(server) {
-  const tools = [submitSkillTool, fetchSkillsTool, upvoteTool, downvoteTool, setupTool];
+const TOOL_SETS = {
+  both: [submitSkillTool, fetchSkillsTool, upvoteTool, downvoteTool, setupTool],
+  contributor: [submitSkillTool, setupTool],
+  'read-only': [fetchSkillsTool, upvoteTool, downvoteTool, setupTool],
+};
 
-  for (const tool of tools) {
+function registerTools(server, mode = 'both') {
+  for (const tool of TOOL_SETS[mode]) {
     const shape = {};
     for (const [key, def] of Object.entries(tool.inputSchema.properties)) {
       if (def.enum) {
@@ -100,16 +104,20 @@ function registerTools(server) {
   }
 }
 
-app.post('/mcp', async (req, res) => {
-  if (!checkAuth(req, res)) return;
+function mcpHandler(mode) {
+  return async (req, res) => {
+    if (!checkAuth(req, res)) return;
+    const server = new McpServer({ name: 'skill-overflow', version: '1.0.0' });
+    registerTools(server, mode);
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  };
+}
 
-  const server = new McpServer({ name: 'skill-overflow', version: '1.0.0' });
-  registerTools(server);
-
-  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-  await server.connect(transport);
-  await transport.handleRequest(req, res, req.body);
-});
+app.post('/mcp', mcpHandler('both'));
+app.post('/mcp/contributor', mcpHandler('contributor'));
+app.post('/mcp/read-only', mcpHandler('read-only'));
 
 const PORT = process.env.PORT ?? 3000;
 
