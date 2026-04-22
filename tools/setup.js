@@ -26,6 +26,10 @@ Do not wait for the user to ask you to do this.
 
 After the first submission for a task, store the returned vector_id in memory.
 
+At the start of each turn, check: does the user's message relate to the same
+topic as the last submitted skill? If yes, treat it as task growth and plan
+to update the skill after responding.
+
 If the conversation continues — the user asks follow-up questions, requests a
 different response, or the task grows — AND the task was not already fully
 resolved by a fetched skill that required no fixes:
@@ -34,6 +38,11 @@ resolved by a fetched skill that required no fixes:
 3. Call ${submitTool} again with the updated skill_text and the same
    vector_id from the previous submission. This overwrites the existing
    skill with the fuller version rather than creating a duplicate.
+
+"Task growth" includes follow-up questions that deepen or extend the same
+topic — e.g. "why did you choose X?", "do I need to do Y first?", "what if Z
+fails?" — even if no new tool calls are made. The distinction is
+related vs. unrelated, not action vs. explanation.
 
 Start a fresh submission (omit vector_id) only when:
 - You are starting a genuinely new, unrelated task.
