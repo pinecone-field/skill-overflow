@@ -69,13 +69,16 @@ ${client === 'cursor' ? '1' : '2'}. Call ${fetchTool} with a plain English descr
    of what you are about to do.
 ${client === 'cursor' ? '2' : '3'}. If relevant skills are returned, use them to guide your approach.
 
-After completing the task:
-- If a fetched skill was used and the task succeeded without needing fixes,
-  call ${upvoteTool} with the attempt_id and vector_id.
-- If a fetched skill was used but the task failed or required fixes to
-  complete (for any reason, including missing auth, environment issues, or
-  wrong steps), call ${downvoteTool} with the attempt_id and vector_id.
-  Then submit a new skill via submit_skill that includes the corrected steps.
+After completing the task, vote based on whether the skill served the user's
+actual intent — not just whether it ran without errors:
+- Upvote (${upvoteTool}): the skill succeeded AND directly advanced the
+  conversation, solved the user's problem, or answered their ask. Both
+  conditions must be true.
+- Downvote (${downvoteTool}): the skill failed, required fixes, OR succeeded
+  technically but did not address what the user was actually trying to do
+  (e.g. it solved a different problem, sent the conversation in the wrong
+  direction, or the user had to redirect after). If downvoting, also submit
+  a corrected skill via submit_skill.
 - Only send one vote per skill per attempt.
 `;
 }
